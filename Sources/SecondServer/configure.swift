@@ -1,26 +1,14 @@
-import Fluent
-import FluentPostgresDriver
-import Leaf
 import Vapor
+import FluentPostgresDriver
 
 public func configure(_ app: Application) async throws {
-    // Optional: serve /Public
-    // app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))
-
-    // ─── Database ─────────────────────────────────────────────────────────────
+    // ← replace with your real DATABASE_URL or set as env
     let url = Environment.get("DATABASE_URL")
-        ?? "postgresql://vapor_username:vapor_password@localhost:5432/vapor_database"
-    try app.databases.use(.postgres(url: url), as: .psql)   // :contentReference[oaicite:0]{index=0}
+        ?? "postgresql://off:off@localhost:5432/openfoodfacts"
 
-    // ─── Migrations ────────────────────────────────────────────────────────────
-    app.migrations.add(CreateProducts())
-    #if DEBUG
-    try await app.autoMigrate()
-    #endif
+    // register Postgres via URL
+    try app.databases.use(.postgres(url: url), as: .psql)
 
-    // ─── Views ─────────────────────────────────────────────────────────────────
-    app.views.use(.leaf)
-
-    // ─── Routes ────────────────────────────────────────────────────────────────
+    // register your HTTP routes
     try routes(app)
 }
