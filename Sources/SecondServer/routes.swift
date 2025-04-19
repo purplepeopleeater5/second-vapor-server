@@ -1,38 +1,38 @@
-import Vapor                         // brings in Application, Response, Abort, HTTPHeaders, etc. :contentReference[oaicite:0]{index=0}
-import SQLKit                        // gives SQLDatabase, SQLRow, SQLExpression :contentReference[oaicite:1]{index=1}
+import Vapor           // for Application, Request, Response, Abort, etc.
+import SQLKit           // for SQLDatabase, SQLRow
 
 func routes(_ app: Application) throws {
-    app.get("product", ":code") { req async throws -> Response in
-        // 1) Grab the code parameter
-        let code = try req.parameters.require("code")
+    app.get("product", "search") { req async throws -> Response in
+        // 1) Read the `name` query parameter: /product/search?name=apple
+        guard let name = req.query[String.self, at: "name"]?.trimmingCharacters(in: .whitespaces),
+              !name.isEmpty
+        else {
+            throw Abort(.badRequest, reason: "You must provide a non‑empty `name` query parameter")
+        }
 
-        // 2) Downcast to SQLDatabase – Swift 6 requires 'any' for protocol existentials :contentReference[oaicite:2]{index=2}
+        // 2) Downcast to the SQLDatabase protocol for raw queries
         let sqlDb = req.db as! any SQLDatabase
 
-        // 3) Run a single-argument raw() with embedded bind to avoid injection :contentReference[oaicite:3]{index=3}
+        // 3) Run raw SQL to filter JSONB: extract product_name via ->> and use ILIKE
         let rows = try await sqlDb.raw("""
             SELECT doc::text AS json
               FROM products
-             WHERE code = \(bind: code)
-            """
-        ).all()                                                      // returns [any SQLRow] :contentReference[oaicite:4]{index=4}
+             WHERE doc->>'product_name' ILIKE '%' || $1 || '%'
+            """, [name]
+        ).all()  // returns [any SQLRow]
 
-        // 4) Ensure we got something, else 404
+        // 4) If no rows found, return 404
         guard let row = rows.first else {
-            throw Abort(.notFound,
-                        reason: "No product with code '\(code)'")
+            throw Abort(.notFound, reason: "No product found with name containing '\(name)'")
         }
 
-        // 5) Extract the JSON string – SQLRow.decode(column:as:) is the correct API :contentReference[oaicite:5]{index=5}
+        // 5) Decode the JSON string out of the row
         let jsonString = try row.decode(column: "json", as: String.self)
 
-        // 6) Build and return a proper JSON response
+        // 6) Build and return the HTTP response
         var res = Response(status: .ok)
-        res.headers.contentType = .json                              // set JSON content type :contentReference[oaicite:6]{index=6}
+        res.headers.contentType = .json
         res.body = .init(string: jsonString)
         return res
     }
-
-    // Optional: a quick health‑check route
-    app.get("health") { _ in "✅ OK" }
 }
