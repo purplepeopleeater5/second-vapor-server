@@ -1,31 +1,42 @@
 // swift-tools-version:6.0
 import PackageDescription
 
+// Enable Swift’s upcoming features (if you need them)
+var swiftSettings: [SwiftSetting] {
+    [.enableUpcomingFeature("ExistentialAny")]
+}
+
 let package = Package(
     name: "SecondServer",
     platforms: [
-       .macOS(.v13)
+        .macOS(.v13)
+    ],
+    products: [
+        .executable(
+            name: "SecondServer",
+            targets: ["SecondServer"]
+        )
     ],
     dependencies: [
-        // 💧 A server-side Swift web framework.
+        // Vapor web framework
         .package(url: "https://github.com/vapor/vapor.git", from: "4.110.1"),
-        // 🗄 An ORM for SQL and NoSQL databases.
+        // Fluent ORM
         .package(url: "https://github.com/vapor/fluent.git", from: "4.9.0"),
-        // 🐘 Fluent driver for Postgres.
+        // Fluent Postgres driver
         .package(url: "https://github.com/vapor/fluent-postgres-driver.git", from: "2.8.0"),
-        // 🍃 An expressive, performant, and extensible templating language built for Swift.
+        // Leaf templating (if you use it)
         .package(url: "https://github.com/vapor/leaf.git", from: "4.3.0"),
-        // 🔵 Non-blocking, event-driven networking for Swift. Used for custom executors
+        // Swift NIO core & posix
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.65.0"),
     ],
     targets: [
         .executableTarget(
             name: "SecondServer",
             dependencies: [
+                .product(name: "Vapor", package: "vapor"),
                 .product(name: "Fluent", package: "fluent"),
                 .product(name: "FluentPostgresDriver", package: "fluent-postgres-driver"),
                 .product(name: "Leaf", package: "leaf"),
-                .product(name: "Vapor", package: "vapor"),
                 .product(name: "NIOCore", package: "swift-nio"),
                 .product(name: "NIOPosix", package: "swift-nio"),
             ],
@@ -35,13 +46,9 @@ let package = Package(
             name: "SecondServerTests",
             dependencies: [
                 .target(name: "SecondServer"),
-                .product(name: "VaporTesting", package: "vapor"),
+                .product(name: "XCTVapor", package: "vapor")
             ],
             swiftSettings: swiftSettings
         )
     ]
 )
-
-var swiftSettings: [SwiftSetting] { [
-    .enableUpcomingFeature("ExistentialAny"),
-] }

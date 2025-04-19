@@ -1,27 +1,37 @@
-import NIOSSL
 import Fluent
 import FluentPostgresDriver
 import Leaf
 import Vapor
 
-// configures your application
 public func configure(_ app: Application) async throws {
-    // uncomment to serve files from /Public folder
-    // app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))
+    // MARK: – Database
+    let hostname = Environment.get("DATABASE_HOST") ?? "localhost"
+    let port = Environment.get("DATABASE_PORT").flatMap(Int.init)
+                ?? SQLPostgresConfiguration.ianaPortNumber
+    let username = Environment.get("DATABASE_USERNAME") ?? "vapor_username"
+    let password = Environment.get("DATABASE_PASSWORD") ?? "vapor_password"
+    let database = Environment.get("DATABASE_NAME") ?? "vapor_database"
 
-    app.databases.use(DatabaseConfigurationFactory.postgres(configuration: .init(
-        hostname: Environment.get("DATABASE_HOST") ?? "localhost",
-        port: Environment.get("DATABASE_PORT").flatMap(Int.init(_:)) ?? SQLPostgresConfiguration.ianaPortNumber,
-        username: Environment.get("DATABASE_USERNAME") ?? "vapor_username",
-        password: Environment.get("DATABASE_PASSWORD") ?? "vapor_password",
-        database: Environment.get("DATABASE_NAME") ?? "vapor_database",
-        tls: .prefer(try .init(configuration: .clientDefault)))
+    // For local dev, disable TLS; enable it in prod if you need SSL
+    app.databases.use(.postgres(
+        hostname: hostname,
+        port: port,
+        username: username,
+        password: password,
+        database: database,
+        tls: .disable
     ), as: .psql)
 
-    app.migrations.add(CreateTodo())
+    // MARK: – Migrations
+    app.migrations.add(CreateProducts())
 
+    #if DEBUG
+    try await app.autoMigrate()
+    #endif
+
+    // MARK: – Views
     app.views.use(.leaf)
 
-    // register routes
+    // MARK: – Routes
     try routes(app)
 }
