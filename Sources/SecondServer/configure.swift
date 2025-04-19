@@ -4,34 +4,23 @@ import Leaf
 import Vapor
 
 public func configure(_ app: Application) async throws {
-    // MARK: – Database
-    let hostname = Environment.get("DATABASE_HOST") ?? "localhost"
-    let port = Environment.get("DATABASE_PORT").flatMap(Int.init)
-                ?? SQLPostgresConfiguration.ianaPortNumber
-    let username = Environment.get("DATABASE_USERNAME") ?? "vapor_username"
-    let password = Environment.get("DATABASE_PASSWORD") ?? "vapor_password"
-    let database = Environment.get("DATABASE_NAME") ?? "vapor_database"
+    // Optional: serve /Public
+    // app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))
 
-    // For local dev, disable TLS; enable it in prod if you need SSL
-    app.databases.use(.postgres(
-        hostname: hostname,
-        port: port,
-        username: username,
-        password: password,
-        database: database,
-        tls: .disable
-    ), as: .psql)
+    // ─── Database ─────────────────────────────────────────────────────────────
+    let url = Environment.get("DATABASE_URL")
+        ?? "postgresql://vapor_username:vapor_password@localhost:5432/vapor_database"
+    try app.databases.use(.postgres(url: url), as: .psql)   // :contentReference[oaicite:0]{index=0}
 
-    // MARK: – Migrations
+    // ─── Migrations ────────────────────────────────────────────────────────────
     app.migrations.add(CreateProducts())
-
     #if DEBUG
     try await app.autoMigrate()
     #endif
 
-    // MARK: – Views
+    // ─── Views ─────────────────────────────────────────────────────────────────
     app.views.use(.leaf)
 
-    // MARK: – Routes
+    // ─── Routes ────────────────────────────────────────────────────────────────
     try routes(app)
 }

@@ -5,11 +5,9 @@ import Vapor
 final class Product: Model, Content {
     static let schema = "products"
 
-    // String primary key in 'code' column
     @ID(custom: "code", generatedBy: .user)
     var id: String?
 
-    // Store the raw JSONB payload
     @Field(key: "doc")
     var doc: JSON
 
@@ -20,3 +18,6 @@ final class Product: Model, Content {
         self.doc = doc
     }
 }
+
+// Allow mutable properties in a Sendable class
+extension Product: @unchecked Sendable { }
